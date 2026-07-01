@@ -1,3 +1,4 @@
+import { withBasePath } from "@/lib/app-path";
 import { db } from "@/lib/db";
 
 export type PublicFarmDocument = {
@@ -80,7 +81,7 @@ function normalizeDocuments(value: unknown): PublicFarmDocument[] {
       number: toStringOrNull(document.number),
       issuedAt: toDateStringOrNull(document.issuedAt),
       expiresAt: toDateStringOrNull(document.expiresAt),
-      fileUrl: toStringOrNull(document.fileUrl),
+      fileUrl: document.fileUrl ? withBasePath(String(document.fileUrl)) : null,
       note: toStringOrNull(document.note),
     }))
     .filter((document) => document.id && document.name);

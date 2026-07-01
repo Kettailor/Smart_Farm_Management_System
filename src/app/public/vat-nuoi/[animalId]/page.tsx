@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { withBasePath } from "@/lib/app-path";
 import { loadPublicLivestockAnimalDetailById } from "@/lib/livestock-detail";
 import { buildPublicLivestockAnimalQrValue } from "@/lib/public-livestock-url";
 import { renderQrSvg } from "@/lib/qr-code";
@@ -94,7 +95,7 @@ export default async function PublicLivestockAnimalPage({ params }: PageProps) {
     <main className={styles.page}>
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand}>
-          <Image src="/assets/logo_ketkatecofarm.png" alt="KetKat-EcoFarm" width={36} height={36} />
+          <Image src={withBasePath("/assets/logo_ketkatecofarm.png")} alt="KetKat-EcoFarm" width={36} height={36} />
           <span>KetKat-EcoFarm</span>
         </Link>
         <nav className={styles.nav} aria-label="Điều hướng public">

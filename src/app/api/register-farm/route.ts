@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { layOwnerIdTuRequest, layOwnerIdTuServerCookie } from "@/lib/auth";
+import { ensureCoreSchema } from "@/lib/core-schema";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 import { ensureFarmSettingsDefaults, ensureSettingsSchema } from "@/lib/settings-schema";
 
 type Payload = {
@@ -42,10 +44,8 @@ function parseAddressParts(locationName?: string) {
 }
 
 const FARM_LIVESTOCK_OVERVIEW_SCHEMA_SQL = `
-create extension if not exists pgcrypto;
-
 create table if not exists du_lieu.thong_tin_chan_nuoi_trang_trai (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   loai_chan_nuoi text not null,
   created_at timestamptz not null default now(),
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Phiên đăng nhập không hợp lệ." }, { status: 401 });
     }
 
+    await ensureCoreSchema();
     const existing = await db.query(
       `select t.id
        from du_lieu.trang_trai t
@@ -71,7 +72,9 @@ export async function POST(request: NextRequest) {
       [ownerId]
     );
     if (existing.rows.length > 0) {
-      return NextResponse.json({ message: "Thông tin nông trại đã được lưu." }, { status: 409 });
+      const farmId = String(existing.rows[0].id);
+      await ensureFarmSettingsDefaults(farmId, ownerId);
+      return NextResponse.json({ message: "Thông tin nông trại đã được lưu.", farmId, nextPath: "/dashboard" });
     }
 
     const body = (await request.json()) as Payload;
@@ -86,7 +89,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Vĩ độ hoặc kinh độ không hợp lệ." }, { status: 400 });
     }
 
-    await db.query(FARM_LIVESTOCK_OVERVIEW_SCHEMA_SQL);
+    if (shouldRunRuntimeSchemaSync()) {
+      await db.query(FARM_LIVESTOCK_OVERVIEW_SCHEMA_SQL);
+    }
     await ensureSettingsSchema();
     const parsedAddress = parseAddressParts(body.location.locationName);
     const addressMetadata = {
@@ -110,9 +115,9 @@ export async function POST(request: NextRequest) {
       );
 
       await client.query(
-        `insert into du_lieu.vi_tri_trang_trai (trang_trai_id, ten_dia_diem, maps_link, kinh_do, vi_do)
-         values ($1,$2,$3,$4,$5)`,
-        [farmId, body.location.locationName ?? null, body.location.mapsLink ?? null, lng, lat]
+        `insert into du_lieu.vi_tri_trang_trai (id, trang_trai_id, ten_dia_diem, maps_link, kinh_do, vi_do)
+         values ($1,$2,$3,$4,$5,$6)`,
+        [randomUUID(), farmId, body.location.locationName ?? null, body.location.mapsLink ?? null, lng, lat]
       );
 
       await client.query(
@@ -146,10 +151,10 @@ export async function POST(request: NextRequest) {
 
       for (const livestockType of livestockTypes) {
         await client.query(
-          `insert into du_lieu.thong_tin_chan_nuoi_trang_trai (trang_trai_id, loai_chan_nuoi)
-           values ($1,$2)
+          `insert into du_lieu.thong_tin_chan_nuoi_trang_trai (id, trang_trai_id, loai_chan_nuoi)
+           values ($1,$2,$3)
            on conflict (trang_trai_id, loai_chan_nuoi) do nothing`,
-          [farmId, livestockType]
+          [randomUUID(), farmId, livestockType]
         );
       }
       await client.query("commit");
@@ -162,6 +167,7 @@ export async function POST(request: NextRequest) {
       client.release();
     }
   } catch (error) {
+    console.error("[register_farm_failed]", error);
     return NextResponse.json({ message: "Không thể lưu thông tin nông trại.", error: String(error) }, { status: 500 });
   }
 }

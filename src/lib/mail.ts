@@ -7,6 +7,7 @@ type MailConfig = {
   port: number;
   secure: boolean;
   startTls: boolean;
+  tlsRejectUnauthorized: boolean;
   user: string | null;
   pass: string | null;
   from: string;
@@ -58,31 +59,56 @@ function envText(name: string) {
   return value ? value : null;
 }
 
-function envBoolean(name: string, fallback: boolean) {
-  const value = envText(name);
+function firstEnv(...names: string[]) {
+  for (const name of names) {
+    const value = envText(name);
+    if (value) return value;
+  }
+  return null;
+}
+
+function hasAnyEnv(...names: string[]) {
+  return names.some((name) => Boolean(envText(name)));
+}
+
+function envBooleanValue(value: string | null, fallback: boolean) {
   if (!value) return fallback;
   return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
 
-function envNumber(name: string, fallback: number) {
-  const value = Number(envText(name));
-  return Number.isFinite(value) ? value : fallback;
+function envNumberValue(value: string | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function domainFromEmail(address: string | null) {
+  const email = address ? extractEmail(address) : "";
+  const domain = email.split("@")[1]?.trim().toLowerCase();
+  return domain || null;
 }
 
 function getMailConfig(): MailConfig | null {
-  const host = envText("SMTP_HOST");
-  const user = envText("SMTP_USER");
-  const pass = envText("SMTP_PASS");
-  const secure = envBoolean("SMTP_SECURE", envText("SMTP_PORT") === "465");
-  const port = envNumber("SMTP_PORT", secure ? 465 : 587);
-  const from = envText("MAIL_FROM") || envText("SMTP_FROM") || (user ? `KetKat-EcoFarm <${user}>` : null);
+  const user = firstEnv("WEBMAIL_EMAIL", "WEBMAIL_USER", "SMTP_USER");
+  const pass = firstEnv("WEBMAIL_PASSWORD", "WEBMAIL_PASS", "SMTP_PASS");
+  const webmailMode = hasAnyEnv("WEBMAIL_EMAIL", "WEBMAIL_USER", "WEBMAIL_PASSWORD", "WEBMAIL_PASS", "WEBMAIL_HOST", "WEBMAIL_PORT");
+  const webmailDomain = domainFromEmail(user);
+  const inferredWebmailHost = webmailMode && webmailDomain ? `mail.${webmailDomain}` : null;
+  const host = firstEnv("WEBMAIL_HOST", "SMTP_HOST") || inferredWebmailHost;
+  const portText = firstEnv("WEBMAIL_PORT", "SMTP_PORT");
+  const defaultSecure = portText ? portText === "465" : webmailMode;
+  const secure = envBooleanValue(firstEnv("WEBMAIL_SECURE", "SMTP_SECURE"), defaultSecure);
+  const port = envNumberValue(portText, secure ? 465 : 587);
+  const appName = envText("NEXT_PUBLIC_APP_NAME") || "KetKat-EcoFarm";
+  const from = firstEnv("WEBMAIL_FROM", "MAIL_FROM", "SMTP_FROM") || (user ? `${appName} <${user}>` : null);
+  const tlsRejectUnauthorized = envBooleanValue(firstEnv("WEBMAIL_TLS_REJECT_UNAUTHORIZED", "SMTP_TLS_REJECT_UNAUTHORIZED"), true);
 
-  if (!host || !from) return null;
+  if (!host || !from || (webmailMode && (!user || !pass))) return null;
   return {
     host,
     port,
     secure,
-    startTls: envBoolean("SMTP_STARTTLS", !secure),
+    startTls: envBooleanValue(firstEnv("WEBMAIL_STARTTLS", "SMTP_STARTTLS"), !secure),
+    tlsRejectUnauthorized,
     user,
     pass,
     from,
@@ -237,9 +263,9 @@ class SmtpConnection {
     this.socket.write(`${normalized}\r\n.\r\n`);
   }
 
-  async upgradeTls(host: string) {
+  async upgradeTls(host: string, rejectUnauthorized = true) {
     const rawSocket = this.detach();
-    const secureSocket = tls.connect({ socket: rawSocket, servername: host });
+    const secureSocket = tls.connect({ socket: rawSocket, servername: host, rejectUnauthorized });
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("SMTP STARTTLS timeout.")), SMTP_TIMEOUT_MS);
       secureSocket.once("secureConnect", () => {
@@ -263,7 +289,7 @@ class SmtpConnection {
 
 function connectSocket(config: MailConfig) {
   const socket = config.secure
-    ? tls.connect({ host: config.host, port: config.port, servername: config.host })
+    ? tls.connect({ host: config.host, port: config.port, servername: config.host, rejectUnauthorized: config.tlsRejectUnauthorized })
     : net.connect({ host: config.host, port: config.port });
 
   return new Promise<net.Socket | tls.TLSSocket>((resolve, reject) => {
@@ -283,7 +309,7 @@ function connectSocket(config: MailConfig) {
 async function sendViaSmtp(config: MailConfig, options: Required<SendMailOptions>) {
   const socket = await connectSocket(config);
   const connection = new SmtpConnection(socket);
-  const heloName = envText("SMTP_HELO_NAME") || "localhost";
+  const heloName = firstEnv("WEBMAIL_HELO_NAME", "SMTP_HELO_NAME") || "localhost";
 
   try {
     await connection.expect(220, 299);
@@ -293,7 +319,7 @@ async function sendViaSmtp(config: MailConfig, options: Required<SendMailOptions
     if (!config.secure && config.startTls) {
       connection.sendLine("STARTTLS");
       await connection.expect(220, 299);
-      await connection.upgradeTls(config.host);
+      await connection.upgradeTls(config.host, config.tlsRejectUnauthorized);
       connection.sendLine(`EHLO ${heloName}`);
       await connection.expect(250, 299);
     }
@@ -321,17 +347,34 @@ async function sendViaSmtp(config: MailConfig, options: Required<SendMailOptions
   }
 }
 
+function mailErrorReason(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function sendMail(options: SendMailOptions): Promise<SendMailResult> {
   const config = getMailConfig();
   if (!config) {
-    return { sent: false, skipped: true, reason: "SMTP chưa được cấu hình." };
+    return { sent: false, skipped: true, reason: "Webmail/SMTP chua duoc cau hinh. Can WEBMAIL_EMAIL va WEBMAIL_PASSWORD hoac SMTP_*." };
   }
 
-  await sendViaSmtp(config, {
-    ...options,
-    from: options.from || config.from,
-  });
-  return { sent: true };
+  try {
+    await sendViaSmtp(config, {
+      ...options,
+      from: options.from || config.from,
+    });
+    return { sent: true };
+  } catch (error) {
+    const reason = mailErrorReason(error);
+    console.error("[mail_send_failed]", {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      startTls: config.startTls,
+      user: config.user,
+      reason,
+    });
+    return { sent: false, reason };
+  }
 }
 
 export function escapeHtml(value: string | number | null | undefined) {

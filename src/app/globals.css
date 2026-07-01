@@ -667,7 +667,7 @@ button, input, textarea { font: inherit; }
 .marketing-map-cta:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(31,122,74,0.18); }
 .marketing-map-cta > * { position: relative; z-index: 1; }
 @keyframes mapShimmer { 0% { transform: translateX(-120%); } 45% { transform: translateX(120%); } 100% { transform: translateX(120%); } }
-.marketing-hero { position: relative; overflow: hidden; min-height: 680px; padding: 48px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 0.88fr); gap: 44px; align-items: end; border-radius: 34px; background-image: linear-gradient(90deg, rgba(8,29,18,0.9) 0%, rgba(11,46,29,0.76) 44%, rgba(20,57,42,0.24) 100%), linear-gradient(180deg, rgba(14,24,18,0.06), rgba(14,24,18,0.38)), url("/assets/img/landing-register.jpg"); background-size: cover; background-position: center; box-shadow: 0 34px 90px rgba(16,32,22,0.18); }
+.marketing-hero { position: relative; overflow: hidden; min-height: 680px; padding: 48px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 0.88fr); gap: 44px; align-items: end; border-radius: 34px; background-image: var(--marketing-hero-background); background-size: cover; background-position: center; box-shadow: 0 34px 90px rgba(16,32,22,0.18); }
 .marketing-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.1), transparent 28%, rgba(7,20,13,0.12)); pointer-events: none; }
 .marketing-hero-copy { position: relative; z-index: 1; max-width: 780px; padding: 10px 0; display: grid; align-content: center; color: #fff; }
 .marketing-hero-copy .section-eyebrow { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.26); color: #ffffff; box-shadow: 0 14px 28px rgba(0,0,0,0.1); }

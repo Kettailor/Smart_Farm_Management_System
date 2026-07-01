@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CowLoading from "@/components/cow-loading";
+import { withBasePath } from "@/lib/app-path";
 
 type InviteStatus = "idle" | "checking" | "valid" | "expired" | "accepted" | "declined" | "not_found";
 
@@ -112,7 +113,7 @@ export default function RegistrationPage() {
       <section className="auth-card card auth-card-register">
         <aside className="auth-visual auth-visual-register">
           <div className="auth-brand-row">
-            <Image src="/favicon.ico" alt="KetKat-EcoFarm" width={46} height={46} className="auth-logo" />
+            <Image src={withBasePath("/favicon.ico")} alt="KetKat-EcoFarm" width={46} height={46} className="auth-logo" />
             <div>
               <p className="auth-brand-label">KetKat-EcoFarm</p>
               <strong>{inviteToken ? "Hoàn tất lời mời" : "Tạo tài khoản chủ sở hữu"}</strong>

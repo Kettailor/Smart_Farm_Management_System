@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export type DiemThoiTietTheoGio = {
   thoi_gian: string;
@@ -185,6 +186,7 @@ export function moTaMaThoiTiet(code: number | null | undefined) {
 }
 
 async function taoBangNeuChuaCo() {
+  if (!shouldRunRuntimeSchemaSync()) return;
   await db.query(`
     create table if not exists du_lieu.thoi_tiet_bo_nho_dem (
       vi_tri_ma text primary key,

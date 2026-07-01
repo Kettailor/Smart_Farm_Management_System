@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { TEN_COOKIE_XAC_THUC, cauHinhCookieXacThuc } from "@/lib/auth";
+import { TEN_COOKIE_XAC_THUC, taoCauHinhCookieXacThuc } from "@/lib/auth";
+import { withBasePath } from "@/lib/app-path";
 
 export const dynamic = "force-dynamic";
 
-function xoaCookieDangNhap(response: NextResponse) {
-  response.cookies.set(TEN_COOKIE_XAC_THUC, "", { ...cauHinhCookieXacThuc, maxAge: 0 });
-  response.cookies.set("ownerId", "", { ...cauHinhCookieXacThuc, maxAge: 0 });
+function xoaCookieDangNhap(request: NextRequest, response: NextResponse) {
+  const cookieConfig = taoCauHinhCookieXacThuc(request);
+  response.cookies.set(TEN_COOKIE_XAC_THUC, "", { ...cookieConfig, maxAge: 0 });
+  response.cookies.set("ownerId", "", { ...cookieConfig, maxAge: 0 });
   return response;
 }
 
@@ -19,14 +21,14 @@ function taoOriginTuRequest(request: NextRequest) {
   return `${protocol}://${host}`;
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const response = NextResponse.json({ message: "Dang xuat thanh cong." });
-  return xoaCookieDangNhap(response);
+  return xoaCookieDangNhap(request, response);
 }
 
 export async function GET(request: NextRequest) {
   const next = request.nextUrl.searchParams.get("next") || "/login";
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/login";
-  const url = new URL(safeNext, taoOriginTuRequest(request));
-  return xoaCookieDangNhap(NextResponse.redirect(url));
+  const url = new URL(withBasePath(safeNext), taoOriginTuRequest(request));
+  return xoaCookieDangNhap(request, NextResponse.redirect(url));
 }

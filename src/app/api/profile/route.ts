@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cauHinhCookieXacThuc, layOwnerIdTuServerCookie, TEN_COOKIE_XAC_THUC } from "@/lib/auth";
+import { layOwnerIdTuServerCookie, taoCauHinhCookieXacThuc, TEN_COOKIE_XAC_THUC } from "@/lib/auth";
 import { deleteSettingsFarm, loadSettingsProfile, SettingsAccessError, updateSettingsProfile } from "@/lib/settings-overview";
 
 export const dynamic = "force-dynamic";
@@ -62,8 +62,9 @@ export async function DELETE(request: NextRequest) {
         profile: null,
         deletedAccount: true,
       });
-      response.cookies.set(TEN_COOKIE_XAC_THUC, "", { ...cauHinhCookieXacThuc, maxAge: 0 });
-      response.cookies.set("ownerId", "", { ...cauHinhCookieXacThuc, maxAge: 0 });
+      const cookieConfig = taoCauHinhCookieXacThuc(request);
+      response.cookies.set(TEN_COOKIE_XAC_THUC, "", { ...cookieConfig, maxAge: 0 });
+      response.cookies.set("ownerId", "", { ...cookieConfig, maxAge: 0 });
       return response;
     }
 

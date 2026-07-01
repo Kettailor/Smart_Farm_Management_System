@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 let schemaReady: Promise<void> | null = null;
 
 export async function ensureWorkSchema() {
+  if (!shouldRunRuntimeSchemaSync()) return;
   if (!schemaReady) {
     schemaReady = (async () => {
       await db.query(`

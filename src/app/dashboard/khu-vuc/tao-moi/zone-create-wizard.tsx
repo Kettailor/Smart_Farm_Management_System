@@ -5,6 +5,7 @@ import CowLoading from "@/components/cow-loading";
 import MapViewSwitcher from "@/components/dashboard-map-view-switcher";
 import ZoneActionMenu from "@/components/dashboard-zone-actions";
 import type { ToolbarAction } from "@/components/dashboard-map-tool-icons";
+import { withBasePath } from "@/lib/app-path";
 import { WAREHOUSE_TYPE_OPTIONS, type WarehouseType } from "@/lib/warehouse-types";
 import { ZONE_TYPE_FORM_CONFIGS, ZONE_TYPE_OPTIONS, type ZoneTypeKey } from "@/lib/zone-type-utils";
 import styles from "./zone-create-wizard.module.css";
@@ -216,7 +217,7 @@ export default function ZoneCreateWizard({ initialLocation }: Props) {
         return setError(data.message || "Không thể lưu khu vực.");
       }
       window.dispatchEvent(new Event("farm:navigation-loading"));
-      window.location.href = data.nextPath || "/dashboard/khu-vuc";
+      window.location.href = withBasePath(data.nextPath || "/dashboard/khu-vuc");
     } catch {
       savingRef.current = false;
       setLoading(false);

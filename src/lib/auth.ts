@@ -1,6 +1,7 @@
 import { createHash, createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "crypto";
 import { cookies as nextCookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { APP_BASE_PATH } from "@/lib/app-path";
 import { db } from "@/lib/db";
 import {
   docPayloadTokenXacThuc,
@@ -99,6 +100,29 @@ export const cauHinhCookieXacThuc = {
   httpOnly: true,
   sameSite: "lax" as const,
   secure: process.env.NODE_ENV === "production",
-  path: "/",
+  path: APP_BASE_PATH || "/",
   maxAge: THOI_GIAN_DANG_NHAP_GIAY,
 };
+
+function layHeaderDauTien(request: NextRequest | undefined, name: string) {
+  return request?.headers.get(name)?.split(",")[0]?.trim().toLowerCase() || null;
+}
+
+function nenDungCookieSecure(request?: NextRequest) {
+  const envValue = process.env.AUTH_COOKIE_SECURE?.trim().toLowerCase();
+  if (envValue === "true") return true;
+  if (envValue === "false") return false;
+
+  const forwardedProtocol = layHeaderDauTien(request, "x-forwarded-proto");
+  const protocol = forwardedProtocol || request?.nextUrl.protocol.replace(":", "").toLowerCase();
+  if (protocol) return protocol === "https";
+
+  return process.env.NODE_ENV === "production";
+}
+
+export function taoCauHinhCookieXacThuc(request?: NextRequest) {
+  return {
+    ...cauHinhCookieXacThuc,
+    secure: nenDungCookieSecure(request),
+  };
+}

@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { layOwnerIdTuServerCookie } from "@/lib/auth";
+import { withBasePath } from "@/lib/app-path";
 import { db } from "@/lib/db";
 import { requireFarmAccess } from "@/lib/farm-access";
 import { loadSettingsProfile } from "@/lib/settings-overview";
@@ -48,7 +49,7 @@ async function saveDocumentImage(file: File, farmId: string) {
   await mkdir(uploadDir, { recursive: true });
   const bytes = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(uploadDir, fileName), bytes);
-  return `/uploads/farm-documents/${fileName}`;
+  return withBasePath(`/uploads/farm-documents/${fileName}`);
 }
 
 export async function POST(request: NextRequest) {
@@ -90,9 +91,9 @@ export async function POST(request: NextRequest) {
 
     await db.query(
       `insert into du_lieu.chung_tu_trang_trai
-         (trang_trai_id, ma_chung_tu, ten_chung_tu, loai_chung_tu, so_chung_tu, ngay_ban_hanh, ngay_het_han, trang_thai, tep_dinh_kem_url, ghi_chu, metadata_json)
-       values ($1, $2, $3, $4, nullif($5, ''), $6::date, $7::date, 'active', $8, nullif($9, ''), $10::jsonb)`,
-      [farmId, code, name, type, number, issuedAt, expiresAt, fileUrl, note, JSON.stringify(metadata)]
+         (id, trang_trai_id, ma_chung_tu, ten_chung_tu, loai_chung_tu, so_chung_tu, ngay_ban_hanh, ngay_het_han, trang_thai, tep_dinh_kem_url, ghi_chu, metadata_json)
+       values ($1, $2, $3, $4, $5, nullif($6, ''), $7::date, $8::date, 'active', $9, nullif($10, ''), $11::jsonb)`,
+      [randomUUID(), farmId, code, name, type, number, issuedAt, expiresAt, fileUrl, note, JSON.stringify(metadata)]
     );
 
     const profile = await loadSettingsProfile(ownerId);

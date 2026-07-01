@@ -1,4 +1,7 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { ensureCoreSchema } from "@/lib/core-schema";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export const SETTINGS_SCHEMA_SQL = `
 create table if not exists du_lieu.cai_dat_trang_trai (
@@ -45,7 +48,7 @@ alter table du_lieu.nguoi_dung
   add column if not exists trang_thai text not null default 'active';
 
 create table if not exists du_lieu.vai_tro_trang_trai (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   ma_vai_tro text not null,
   ten_vai_tro text not null,
@@ -58,7 +61,7 @@ create table if not exists du_lieu.vai_tro_trang_trai (
 );
 
 create table if not exists du_lieu.thanh_vien_trang_trai (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   nguoi_dung_id uuid not null references du_lieu.nguoi_dung(id) on delete cascade,
   vai_tro_id uuid not null references du_lieu.vai_tro_trang_trai(id) on delete restrict,
@@ -74,7 +77,7 @@ alter table du_lieu.thanh_vien_trang_trai
   add column if not exists metadata_json jsonb not null default '{}'::jsonb;
 
 create table if not exists du_lieu.loi_moi_trang_trai (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   email text not null,
   ho_ten text,
@@ -97,7 +100,7 @@ alter table du_lieu.loi_moi_trang_trai
   add column if not exists metadata_json jsonb not null default '{}'::jsonb;
 
 create table if not exists du_lieu.lien_he_marketing_loi_moi (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,
   loi_moi_id uuid unique references du_lieu.loi_moi_trang_trai(id) on delete set null,
   trang_trai_id uuid references du_lieu.trang_trai(id) on delete set null,
   nguoi_moi_id uuid references du_lieu.nguoi_dung(id) on delete set null,
@@ -111,7 +114,7 @@ create table if not exists du_lieu.lien_he_marketing_loi_moi (
 );
 
 create table if not exists du_lieu.chung_tu_trang_trai (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   ma_chung_tu text not null,
   ten_chung_tu text not null,
@@ -142,7 +145,8 @@ create index if not exists idx_chung_tu_ngay_het_han on du_lieu.chung_tu_trang_t
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureSettingsSchema() {
-  ensurePromise ??= db.query(SETTINGS_SCHEMA_SQL).then(() => undefined);
+  if (!shouldRunRuntimeSchemaSync()) return;
+  ensurePromise ??= ensureCoreSchema().then(() => db.query(SETTINGS_SCHEMA_SQL)).then(() => undefined);
   return ensurePromise;
 }
 
@@ -158,19 +162,19 @@ export async function ensureFarmSettingsDefaults(farmId: string, ownerId: string
 
   await db.query(
     `insert into du_lieu.vai_tro_trang_trai
-       (trang_trai_id, ma_vai_tro, ten_vai_tro, mo_ta, quyen, la_mac_dinh)
+       (id, trang_trai_id, ma_vai_tro, ten_vai_tro, mo_ta, quyen, la_mac_dinh)
      values
-       ($1, 'owner', 'Chủ sở hữu', 'Toàn quyền cấu hình và quản trị trang trại.', '{"read": true, "settings": true, "users": true, "documents": true, "farm": true, "write": true}'::jsonb, false),
-       ($1, 'admin', 'Quản trị', 'Quản trị vận hành và dữ liệu trang trại.', '{"read": true, "settings": true, "users": true, "documents": true, "farm": true, "write": true}'::jsonb, true),
-       ($1, 'editor', 'Biên tập', 'Xem và chỉnh sửa dữ liệu trang trại được phân quyền.', '{"read": true, "settings": false, "users": false, "documents": true, "farm": true, "write": true}'::jsonb, false),
-       ($1, 'viewer', 'Chỉ xem', 'Chỉ xem dữ liệu được phân quyền.', '{"read": true, "settings": false, "users": false, "documents": false, "farm": true, "write": false}'::jsonb, false)
+       ($2, $1, 'owner', 'Chủ sở hữu', 'Toàn quyền cấu hình và quản trị trang trại.', '{"read": true, "settings": true, "users": true, "documents": true, "farm": true, "write": true}'::jsonb, false),
+       ($3, $1, 'admin', 'Quản trị', 'Quản trị vận hành và dữ liệu trang trại.', '{"read": true, "settings": true, "users": true, "documents": true, "farm": true, "write": true}'::jsonb, true),
+       ($4, $1, 'editor', 'Biên tập', 'Xem và chỉnh sửa dữ liệu trang trại được phân quyền.', '{"read": true, "settings": false, "users": false, "documents": true, "farm": true, "write": true}'::jsonb, false),
+       ($5, $1, 'viewer', 'Chỉ xem', 'Chỉ xem dữ liệu được phân quyền.', '{"read": true, "settings": false, "users": false, "documents": false, "farm": true, "write": false}'::jsonb, false)
      on conflict (trang_trai_id, ma_vai_tro) do update
      set ten_vai_tro = excluded.ten_vai_tro,
          mo_ta = excluded.mo_ta,
          quyen = excluded.quyen,
          la_mac_dinh = excluded.la_mac_dinh,
          updated_at = now()`,
-    [farmId]
+    [farmId, randomUUID(), randomUUID(), randomUUID(), randomUUID()]
   );
 
   const ownerRole = await db.query(
@@ -185,12 +189,12 @@ export async function ensureFarmSettingsDefaults(farmId: string, ownerId: string
   if (!ownerRoleId) return;
 
   await db.query(
-    `insert into du_lieu.thanh_vien_trang_trai (trang_trai_id, nguoi_dung_id, vai_tro_id, trang_thai)
-     values ($1, $2, $3, 'active')
+    `insert into du_lieu.thanh_vien_trang_trai (id, trang_trai_id, nguoi_dung_id, vai_tro_id, trang_thai)
+     values ($1, $2, $3, $4, 'active')
      on conflict (trang_trai_id, nguoi_dung_id) do update
      set vai_tro_id = excluded.vai_tro_id,
          trang_thai = 'active',
          updated_at = now()`,
-    [farmId, ownerId, ownerRoleId]
+    [randomUUID(), farmId, ownerId, ownerRoleId]
   );
 }

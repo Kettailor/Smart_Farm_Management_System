@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export const LIVESTOCK_GROUP_SCHEMA_SQL = `
 create table if not exists du_lieu.nhom_vat_nuoi (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   khu_vuc_id uuid references du_lieu.khu_vuc(id) on delete set null,
   ma_nhom text not null,
@@ -51,7 +52,7 @@ alter table du_lieu.nhom_vat_nuoi
   add column if not exists khu_vuc_id uuid references du_lieu.khu_vuc(id) on delete set null;
 
 create table if not exists du_lieu.vat_nuoi (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   khu_vuc_id uuid references du_lieu.khu_vuc(id) on delete set null,
   nhom_vat_nuoi_id uuid references du_lieu.nhom_vat_nuoi(id) on delete set null,
@@ -142,7 +143,7 @@ create unique index if not exists idx_vat_nuoi_ma_qr_unique on du_lieu.vat_nuoi(
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureLivestockSchema() {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL || !shouldRunRuntimeSchemaSync()) return;
   ensurePromise ??= db.query(LIVESTOCK_GROUP_SCHEMA_SQL).then(() => undefined);
   return ensurePromise;
 }

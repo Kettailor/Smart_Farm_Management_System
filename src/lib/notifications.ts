@@ -1,4 +1,6 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export type NotificationTone = "info" | "success" | "warning" | "danger";
 
@@ -79,12 +81,12 @@ export function subscribeUserNotifications(userId: string, listener: Notificatio
 }
 
 export async function ensureNotificationSchema() {
+  if (!shouldRunRuntimeSchemaSync()) return;
   if (!schemaReady) {
     schemaReady = (async () => {
-      await db.query(`create extension if not exists pgcrypto`);
       await db.query(`
         create table if not exists du_lieu.thong_bao_nguoi_dung (
-          id uuid primary key default gen_random_uuid(),
+          id uuid primary key default du_lieu.uuid_v4(),
           nguoi_dung_id uuid not null references du_lieu.nguoi_dung(id) on delete cascade,
           trang_trai_id uuid references du_lieu.trang_trai(id) on delete cascade,
           tieu_de text not null,
@@ -111,10 +113,11 @@ export async function createUserNotification(input: CreateUserNotificationInput)
   await ensureNotificationSchema();
   const result = await db.query(
     `insert into du_lieu.thong_bao_nguoi_dung
-       (nguoi_dung_id, trang_trai_id, tieu_de, noi_dung, loai, module, href, metadata_json)
-     values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+       (id, nguoi_dung_id, trang_trai_id, tieu_de, noi_dung, loai, module, href, metadata_json)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
      returning *`,
     [
+      randomUUID(),
       input.userId,
       input.farmId ?? null,
       input.title.trim(),

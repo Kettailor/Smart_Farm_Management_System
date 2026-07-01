@@ -1,6 +1,7 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { layOwnerIdTuServerCookie } from "@/lib/auth";
+import { buildAppUrl } from "@/lib/app-path";
 import { db } from "@/lib/db";
 import { requireFarmAccess } from "@/lib/farm-access";
 import {
@@ -127,14 +128,14 @@ function getRequestOrigin(request: NextRequest) {
 }
 
 function buildInvitationUrl(request: NextRequest, inviteToken: string, email: string) {
-  const url = new URL("/register", getRequestOrigin(request));
+  const url = new URL(buildAppUrl(getRequestOrigin(request), "/register"));
   url.searchParams.set("invite", inviteToken);
   url.searchParams.set("email", email);
   return url.toString();
 }
 
 function buildInvitationDeclineUrl(request: NextRequest, inviteToken: string) {
-  const url = new URL("/invitation/decline", getRequestOrigin(request));
+  const url = new URL(buildAppUrl(getRequestOrigin(request), "/invitation/decline"));
   url.searchParams.set("token", inviteToken);
   return url.toString();
 }
@@ -179,6 +180,8 @@ export async function POST(request: NextRequest) {
 
     let inviteMailSent = false;
     let inviteMailWarning: string | null = null;
+    let inviteMailOptions: Parameters<typeof sendMail>[0] | null = null;
+    let replacedPendingInvite = false;
     const client = await db.connect();
     try {
       await client.query("begin");
@@ -228,9 +231,7 @@ export async function POST(request: NextRequest) {
          limit 1`,
         [farmId, email]
       );
-      if ((pendingInvite.rowCount ?? 0) > 0) {
-        throw new AddUserError("Email đã có lời mời đang chờ.", 409);
-      }
+      replacedPendingInvite = (pendingInvite.rowCount ?? 0) > 0;
 
       const blockedInvite = await client.query(
         `select trang_thai, updated_at, updated_at + interval '1 month' as available_at
@@ -243,7 +244,7 @@ export async function POST(request: NextRequest) {
          limit 1`,
         [farmId, email]
       );
-      if ((blockedInvite.rowCount ?? 0) > 0) {
+      if (!replacedPendingInvite && (blockedInvite.rowCount ?? 0) > 0) {
         const status = String(blockedInvite.rows[0]?.trang_thai ?? "").toLowerCase();
         const statusText = status === "declined" ? "đã từ chối" : "đã hết hạn";
         const availableAt = formatInviteCooldownDate(blockedInvite.rows[0]?.available_at);
@@ -278,9 +279,10 @@ export async function POST(request: NextRequest) {
              (select count(*)::int
               from du_lieu.loi_moi_trang_trai
               where trang_trai_id = $1
-                and lower(coalesce(trang_thai, 'pending')) = 'pending')
+                and lower(coalesce(trang_thai, 'pending')) = 'pending'
+                and not (lower(email) = $2 and lower(coalesce(trang_thai, 'pending')) = 'pending'))
            ) as member_count`,
-        [farmId]
+        [farmId, email]
       );
       if (Number(memberCount.rows[0]?.member_count ?? 0) >= 3) {
         throw new AddUserError("Trang trại đã đạt giới hạn 3 người dùng/lời mời.", 409);
@@ -302,20 +304,23 @@ export async function POST(request: NextRequest) {
       }
 
       const inviteToken = randomBytes(32).toString("base64url");
-      await client.query(
+      const supersededInvites = await client.query(
         `update du_lieu.loi_moi_trang_trai
          set trang_thai = 'superseded',
              updated_at = now()
          where trang_trai_id = $1
            and lower(email) = $2
-           and lower(trang_thai) = 'pending'`,
+           and lower(trang_thai) = 'pending'
+         returning id`,
         [farmId, email]
       );
+      replacedPendingInvite = replacedPendingInvite || (supersededInvites.rowCount ?? 0) > 0;
       await client.query(
         `insert into du_lieu.loi_moi_trang_trai
-           (trang_trai_id, email, ho_ten, so_dien_thoai, ngon_ngu, vai_tro_id, trang_thai, token, nguoi_moi_id, het_han_luc, metadata_json)
-         values ($1, $2, $3, $4, $5, $6, 'pending', $7, $8, now() + ($9::int * interval '1 day'), $10::jsonb)`,
+           (id, trang_trai_id, email, ho_ten, so_dien_thoai, ngon_ngu, vai_tro_id, trang_thai, token, nguoi_moi_id, het_han_luc, metadata_json)
+         values ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, now() + ($10::int * interval '1 day'), $11::jsonb)`,
         [
+          randomUUID(),
           farmId,
           email,
           fullName,
@@ -341,14 +346,9 @@ export async function POST(request: NextRequest) {
         expiresInDays: FARM_INVITATION_EXPIRY_DAYS,
         supportEmail: process.env.SUPPORT_EMAIL?.trim() || null,
         supportPhone: process.env.SUPPORT_PHONE?.trim() || null,
-        logoUrl: new URL("/assets/logo_ketkatecofarm.png", getRequestOrigin(request)).toString(),
+        logoUrl: buildAppUrl(getRequestOrigin(request), "/assets/logo_ketkatecofarm.png"),
       });
-      const mailResult = await sendMail({ to: email, ...emailContent });
-      inviteMailSent = mailResult.sent;
-      inviteMailWarning = mailResult.skipped ? mailResult.reason || "SMTP chưa được cấu hình." : null;
-      if (!inviteMailSent) {
-        throw new AddUserError(`Không thể gửi email lời mời: ${inviteMailWarning || "SMTP chưa sẵn sàng."}`, 503);
-      }
+      inviteMailOptions = { to: email, ...emailContent };
 
       await client.query("commit");
     } catch (error) {
@@ -358,12 +358,19 @@ export async function POST(request: NextRequest) {
       client.release();
     }
 
+    if (inviteMailOptions) {
+      const mailResult = await sendMail(inviteMailOptions);
+      inviteMailSent = mailResult.sent;
+      inviteMailWarning = mailResult.sent ? null : mailResult.reason || "Webmail/SMTP chua san sang.";
+    }
+
     const profile = await loadSettingsProfile(ownerId);
+    const inviteActionMessage = replacedPendingInvite ? "Đã tạo lại lời mời" : "Đã tạo lời mời";
     const message = inviteMailSent
-      ? "Đã tạo lời mời, lưu thông tin liên hệ và gửi email xác nhận."
+      ? `${inviteActionMessage}, lưu thông tin liên hệ và gửi email xác nhận.`
       : inviteMailWarning
-        ? `Đã tạo lời mời, nhưng chưa gửi được email xác nhận: ${inviteMailWarning}`
-        : "Đã tạo lời mời.";
+        ? `${inviteActionMessage}, nhưng chưa gửi được email xác nhận: ${inviteMailWarning}`
+        : `${inviteActionMessage}.`;
 
     return NextResponse.json({ message, profile, inviteMailSent, inviteMailWarning });
   } catch (error) {

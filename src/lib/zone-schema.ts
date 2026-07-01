@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export const ZONE_SCHEMA_SQL = `
 insert into du_lieu.danh_muc_loai_khu_vuc (ten, mo_ta)
@@ -39,7 +40,7 @@ create index if not exists idx_khu_vuc_nhom_luu_tru_kho on du_lieu.khu_vuc using
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureZoneSchema() {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL || !shouldRunRuntimeSchemaSync()) return;
   ensurePromise ??= db.query(ZONE_SCHEMA_SQL).then(() => undefined);
   return ensurePromise;
 }

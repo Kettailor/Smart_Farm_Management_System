@@ -6,6 +6,7 @@ import CowLoading from "@/components/cow-loading";
 import ZoneActionMenu from "@/components/dashboard-zone-actions";
 import MapViewSwitcher from "@/components/dashboard-map-view-switcher";
 import type { ToolbarAction } from "@/components/dashboard-map-tool-icons";
+import { withBasePath } from "@/lib/app-path";
 import { WAREHOUSE_TYPE_OPTIONS, isWarehouseType, type WarehouseType } from "@/lib/warehouse-types";
 import styles from "./page.module.css";
 import type { ZoneDetail } from "@/lib/dashboard-zone-detail";
@@ -231,7 +232,7 @@ export default function EditZoneClient({ zone }: Props) {
       const payload = (await response.json()) as { message?: string };
       if (!response.ok) throw new Error(payload.message || "Không thể lưu khu vực.");
       window.dispatchEvent(new Event("farm:navigation-loading"));
-      window.location.href = `/dashboard/khu-vuc/${zone.id}`;
+      window.location.href = withBasePath(`/dashboard/khu-vuc/${zone.id}`);
     } catch (err) {
       savingRef.current = false;
       setLoading(false);

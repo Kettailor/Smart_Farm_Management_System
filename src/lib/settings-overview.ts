@@ -1,3 +1,5 @@
+import { withBasePath } from "@/lib/app-path";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { getAccessibleFarm, getAccessibleFarmCount, type FarmAccess } from "@/lib/farm-access";
 import { expireFarmInvitations } from "@/lib/farm-invitations";
@@ -523,7 +525,7 @@ async function getSettingsDocuments(farmId: string): Promise<SettingsDocument[]>
       issued_at: row.ngay_ban_hanh ? new Date(row.ngay_ban_hanh).toISOString().slice(0, 10) : null,
       expires_at: row.ngay_het_han ? new Date(row.ngay_het_han).toISOString().slice(0, 10) : null,
       status: row.trang_thai ? String(row.trang_thai) : "active",
-      file_url: row.tep_dinh_kem_url ? String(row.tep_dinh_kem_url) : null,
+      file_url: row.tep_dinh_kem_url ? withBasePath(String(row.tep_dinh_kem_url)) : null,
       note: row.ghi_chu ? String(row.ghi_chu) : null,
       is_shared: metadata.is_shared === true,
       file_name: typeof metadata.file_name === "string" ? metadata.file_name : null,
@@ -768,12 +770,15 @@ export async function updateSettingsProfile(ownerId: string, body: Record<string
     }
 
     if (!farmId) {
+      const createdFarmId = randomUUID();
       const created = await client.query(
-        `insert into du_lieu.trang_trai (chu_so_huu_id, ma_trang_trai, ten_trang_trai, dia_chi, kinh_do, vi_do, is_map_shared)
-         values ($1, 'FARM-' || substr(gen_random_uuid()::text, 1, 8), coalesce(nullif($2, ''), 'Trang trai'), $3, $4, $5, coalesce($6, false))
+        `insert into du_lieu.trang_trai (id, chu_so_huu_id, ma_trang_trai, ten_trang_trai, dia_chi, kinh_do, vi_do, is_map_shared)
+         values ($1, $2, $3, coalesce(nullif($4, ''), 'Trang trai'), $5, $6, $7, coalesce($8, false))
          returning id`,
         [
+          createdFarmId,
           ownerId,
+          `FARM-${createdFarmId.slice(0, 8)}`,
           typeof body.farm_name === "string" ? body.farm_name.trim() : null,
           addressLine1,
           nextLongitude,
@@ -857,9 +862,10 @@ export async function updateSettingsProfile(ownerId: string, body: Record<string
 
     if (locationUpdate.rowCount === 0) {
       await client.query(
-        `insert into du_lieu.vi_tri_trang_trai (trang_trai_id, ten_dia_diem, maps_link, kinh_do, vi_do)
-         values ($1, $2, $3, $4, $5)`,
+        `insert into du_lieu.vi_tri_trang_trai (id, trang_trai_id, ten_dia_diem, maps_link, kinh_do, vi_do)
+         values ($1, $2, $3, $4, $5, $6)`,
         [
+          randomUUID(),
           farmId,
           addressLine1,
           typeof body.maps_link === "string" ? body.maps_link : null,

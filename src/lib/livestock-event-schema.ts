@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
 import { ensureLivestockSchema } from "@/lib/livestock-schema";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export const LIVESTOCK_EVENT_SCHEMA_SQL = `
 create table if not exists du_lieu.su_kien_vat_nuoi (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   nhom_vat_nuoi_id uuid references du_lieu.nhom_vat_nuoi(id) on delete set null,
   khu_vuc_nguon_id uuid references du_lieu.khu_vuc(id) on delete set null,
@@ -64,7 +65,7 @@ create index if not exists idx_su_kien_ca_the_vat_nuoi_id on du_lieu.su_kien_vat
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureLivestockEventSchema() {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL || !shouldRunRuntimeSchemaSync()) return;
   await ensureLivestockSchema();
   ensurePromise ??= db.query(LIVESTOCK_EVENT_SCHEMA_SQL).then(() => undefined);
   return ensurePromise;

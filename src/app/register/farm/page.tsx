@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import CowLoading from "@/components/cow-loading";
+import { withBasePath } from "@/lib/app-path";
 
 type LastSource = "name" | "link" | "coord" | "current";
 type Suggestion = { name: string; lat: string; lng: string };
@@ -253,7 +254,7 @@ export default function FarmRegistrationPage() {
       <section className="auth-card card farm-auth-card">
         <aside className="auth-visual auth-visual-register farm-setup-panel">
           <div className="auth-brand-row">
-            <Image src="/favicon.ico" alt="KetKat-EcoFarm" width={46} height={46} className="auth-logo" />
+            <Image src={withBasePath("/favicon.ico")} alt="KetKat-EcoFarm" width={46} height={46} className="auth-logo" />
             <div>
               <p className="auth-brand-label">Thiết lập nông trại</p>
               <strong>KetKat-EcoFarm</strong>

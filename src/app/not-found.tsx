@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { withBasePath } from "@/lib/app-path";
 
 export default function NotFound() {
   return (
@@ -16,7 +17,7 @@ export default function NotFound() {
 
         <div className="farm-404-panel card">
           <div className="farm-404-brand">
-            <Image src="/favicon.ico" alt="KetKat-EcoFarm" width={34} height={34} className="farm-404-logo" />
+            <Image src={withBasePath("/favicon.ico")} alt="KetKat-EcoFarm" width={34} height={34} className="farm-404-logo" />
             <span>KetKat-EcoFarm</span>
           </div>
 

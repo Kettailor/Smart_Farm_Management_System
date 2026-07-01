@@ -1,198 +1,179 @@
-# CNM Farm Product Traceability
+# KetKat-EcoFarm
 
 [![CI](https://github.com/Kettailor/CNM--Farm-Product-Traceability/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/Kettailor/CNM--Farm-Product-Traceability/actions/workflows/ci.yml)
-[![Release](https://github.com/Kettailor/CNM--Farm-Product-Traceability/actions/workflows/release.yml/badge.svg)](https://github.com/Kettailor/CNM--Farm-Product-Traceability/actions/workflows/release.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-14.2-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
-![Version](https://img.shields.io/badge/version-v1.0.0-2f855a)
+![Version](https://img.shields.io/badge/version-1.0.0-238636)
 
-KetKat-EcoFarm là nền tảng quản trị nông trại và truy xuất nguồn gốc sản phẩm nông nghiệp. Ứng dụng gom dữ liệu trang trại, bản đồ khu vực, vật nuôi, công việc, kho vật tư, hồ sơ vận hành và QR truy xuất vào một dashboard Next.js thống nhất.
+KetKat-EcoFarm is a Smart Farm Management System for farm operations, digital farm maps, livestock traceability, work planning, warehouse records, documents, notifications, and public QR lookup.
 
-## Tính năng chính
+## Live Demo
 
-- Quản lý tài khoản, đăng nhập, đăng ký trang trại và phân quyền thành viên.
-- Dashboard tổng quan tình trạng vận hành, khu vực, vật nuôi, công việc và chỉ số trang trại.
-- Bản đồ trang trại với khu vực sản xuất, kho, vùng chăn thả và trạng thái vận hành.
-- Quản lý nhóm vật nuôi, cá thể vật nuôi, sự kiện, điều trị và sổ khám bệnh.
-- Truy xuất công khai bằng QR cho từng cá thể vật nuôi và bản đồ trang trại public.
-- Quản lý kế hoạch chăn thả, lịch sự kiện và biểu đồ Gantt.
-- Quản lý công việc, hạng mục, nhắc việc, thông báo thời gian thực và tài liệu đính kèm.
-- Quản lý kho vật tư, hồ sơ hóa chất, chứng từ trang trại và lời mời người dùng qua email.
-- API health check, Docker Compose, Nginx reverse proxy và Adminer cho môi trường local.
+Demo website: [https://kettailor.io.vn/smart-farm-management-system](https://kettailor.io.vn/smart-farm-management-system)
 
-## Tech stack
+Demo account:
 
-- **Frontend/App:** Next.js 14 App Router, React 18, TypeScript, Sass/Tailwind, Bootstrap assets.
-- **Database:** PostgreSQL 16, schema trong namespace `du_lieu`.
-- **Map/Visualization:** MapLibre GL, Leaflet, Recharts.
-- **QR/Traceability:** ZXing, jsQR, public livestock URLs.
-- **Runtime/Infra:** Node.js 24, Docker, Docker Compose, Nginx, Adminer.
-- **Quality:** ESLint, TypeScript typecheck, production build, GitHub Actions CI.
+```text
+Email:    demo@kettailor.io.vn
+Password: Demo@123456
+```
 
-## Yêu cầu môi trường
+The demo account is provided for evaluation only. Please do not enter private or sensitive data.
 
-- Node.js 24.x
-- npm 10.8+
-- Docker Desktop hoặc Docker Engine + Docker Compose
-- Git
+## Preview
 
-## Cấu hình biến môi trường
+![KetKat-EcoFarm dashboard demo](./public/assets/demo-dashboard.png)
 
-Tạo file `.env.local` từ `.env.example` khi chạy ngoài Docker:
+## Features
+
+- Farm dashboard with operation summaries, data coverage, and traceability flow.
+- Digital farm map with zones, resources, paddocks, water sources, and public sharing.
+- Livestock groups, individual animal profiles, treatments, events, QR codes, and public lookup.
+- Grazing plans, Gantt-style scheduling, activity history, and paddock rotation records.
+- Work management with task items, assignment emails, status tracking, and notifications.
+- Warehouse and chemical profile management for farm supplies and compliance records.
+- User, role, document, and farm settings management.
+- Public pages for farm map and livestock traceability.
+
+## Tech Stack
+
+- **Framework:** Next.js 14 App Router, React 18, TypeScript
+- **Database:** PostgreSQL, `pg`
+- **Maps:** MapLibre GL, Leaflet
+- **Charts/UI:** Recharts, Sass, CSS Modules, Bootstrap assets
+- **QR/Scanning:** ZXing, jsQR
+- **Runtime:** Node.js 22.18+ and npm 10.8+
+
+## Getting Started
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/Kettailor/CNM--Farm-Product-Traceability.git
+cd CNM--Farm-Product-Traceability
+npm install
+```
+
+Create a local environment file:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Các biến quan trọng:
+Configure at least:
 
-| Biến | Mục đích |
-| --- | --- |
-| `DATABASE_URL` | Chuỗi kết nối PostgreSQL. |
-| `APP_URL` | URL server-side dùng để tạo link trong email/API. |
-| `NEXT_PUBLIC_APP_URL` | URL public phía client. |
-| `NEXT_PUBLIC_APP_NAME` | Tên ứng dụng hiển thị trong một số thông báo. |
-| `AUTH_SECRET` / `NEXTAUTH_SECRET` | Khóa ký token đăng nhập. Cần đặt giá trị mạnh khi production. |
-| `CRON_SECRET` | Token bảo vệ endpoint refresh/maintenance. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Cấu hình gửi email lời mời thành viên. |
-| `MAIL_FROM` | Người gửi email. |
-| `SUPPORT_EMAIL`, `SUPPORT_PHONE` | Thông tin hỗ trợ trong email. |
+```env
+DATABASE_URL=postgresql://farmhub:farmhub@localhost:55432/farmhub
+APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_NAME=KetKat-EcoFarm
+AUTH_SECRET=change-me-use-a-long-random-secret
+NEXTAUTH_SECRET=change-me-use-a-long-random-secret
+CRON_SECRET=change-me-cron-secret
+```
 
-Không commit `.env.local` hoặc bất kỳ file `.env.*` thật nào.
-
-## Chạy local bằng npm
+Start the development server:
 
 ```bash
-npm install
 npm run dev
 ```
 
-Mở `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000).
 
-Nếu cần PostgreSQL local, dùng Docker Compose ở phần dưới hoặc tự tạo database rồi import `database/FarmHub_schema.sql`.
+## Database
 
-## Chạy bằng Docker Compose
+The PostgreSQL schema is available at:
+
+```text
+database/FarmHub_schema.sql
+```
+
+If you use the included Docker Compose setup, PostgreSQL runs on `127.0.0.1:55432`.
+
+Common local database values:
+
+```text
+Database: farmhub
+Username: farmhub
+Password: farmhub
+Host:     127.0.0.1
+Port:     55432
+```
+
+## Docker Local Environment
+
+Start app, PostgreSQL, Adminer, and Nginx locally:
 
 ```bash
 docker compose up --build
 ```
 
-Các service mặc định:
+Useful URLs:
 
-| Service | URL/Cổng |
+| Service | URL |
 | --- | --- |
-| App | `http://localhost:3000` |
-| Nginx | `http://localhost` |
-| PostgreSQL | `127.0.0.1:55432` |
-| Adminer | `http://localhost:8080` |
+| App | http://localhost:3000 |
+| Nginx | http://localhost |
+| Adminer | http://localhost:8080 |
 
-Thông tin PostgreSQL local:
-
-- Database: `farmhub`
-- Username: `farmhub`
-- Password: `farmhub`
-- Host trong Docker network: `db`
-- Host từ máy thật: `127.0.0.1`
-- Port từ máy thật: `55432`
-
-Script hỗ trợ:
-
-```powershell
-./scripts/docker-up.ps1
-./scripts/docker-down.ps1
-```
+Stop and remove local containers:
 
 ```bash
-./scripts/docker-up.sh
-./scripts/docker-down.sh
+docker compose down
 ```
 
-Reset database sạch từ schema:
+## Available Scripts
 
 ```bash
-docker compose down -v
-docker compose up --build
+npm run dev        # Start local development server
+npm run build      # Build production bundle
+npm run start      # Start production server
+npm run lint       # Run Next.js lint
+npm run typecheck  # Run TypeScript checks
+npm run quality    # Run lint, typecheck, and build
 ```
 
-Schema PostgreSQL được mount vào container tại `/docker-entrypoint-initdb.d/00_FarmHub_schema.sql`, nên file schema chỉ tự chạy khi volume database được tạo lần đầu.
+## Project Structure
 
-## Kiểm tra chất lượng
-
-```bash
-npm run lint
-npm run typecheck
-npm run build
+```text
+.
+|-- database/          # PostgreSQL schema
+|-- nginx/             # Local reverse proxy config
+|-- public/            # Static assets
+|-- scripts/           # Local helper scripts
+|-- src/app/           # Next.js routes and API routes
+|-- src/components/    # Shared UI components
+|-- src/lib/           # Auth, database, schema, and domain services
+|-- docker-compose.yml
+|-- Dockerfile
+`-- package.json
 ```
 
-Hoặc chạy toàn bộ:
+## Environment And Security Notes
+
+- Do not commit `.env`, `.env.local`, database dumps, certificates, private keys, or uploaded user files.
+- Use long random values for `AUTH_SECRET`, `NEXTAUTH_SECRET`, and `CRON_SECRET`.
+- Use `.env.example` only as a safe template.
+- Runtime uploads under `public/uploads/` are intentionally ignored by Git.
+- Demo credentials are public and should only be used with demo data.
+
+## Quality Checks
+
+Before opening a pull request or publishing changes:
 
 ```bash
 npm run quality
 ```
 
-Health check:
+Health check endpoint:
 
-```bash
-curl http://localhost:3000/api/health
+```text
+GET /api/health
 ```
 
-Kết quả mong đợi:
+Expected response:
 
 ```json
 { "ok": true, "service": "KetKat-EcoFarm" }
 ```
-
-## CI/CD
-
-Repo đã có GitHub Actions:
-
-- `.github/workflows/ci.yml`: chạy lint, typecheck, build Next.js và kiểm tra Docker image trên `dev`, `main` và pull request.
-- `.github/workflows/release.yml`: khi push tag dạng `v1.0.0`, workflow build và publish Docker image lên GitHub Container Registry.
-- `.github/dependabot.yml`: tự mở PR cập nhật npm dependencies và GitHub Actions hằng tuần.
-
-Quy trình release đề xuất:
-
-```bash
-npm version patch --no-git-tag-version
-npm run quality
-git add package.json package-lock.json CHANGELOG.md
-git commit -m "chore: release vX.Y.Z"
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push origin dev --follow-tags
-```
-
-Phiên bản hiện tại: `v1.0.0`.
-
-## Cấu trúc dự án
-
-```text
-.
-├── database/                # Schema PostgreSQL
-├── docs/                    # Tài liệu vận hành GitHub/release
-├── nginx/                   # Reverse proxy config
-├── public/                  # Static assets, logo, upload assets
-├── scripts/                 # Helper scripts Docker
-├── src/app/                 # Next.js App Router pages và API routes
-├── src/components/          # UI components dùng lại
-├── src/lib/                 # Database access, auth, schemas, domain services
-├── Dockerfile               # Production standalone image
-├── docker-compose.yml       # Local app + db + adminer + nginx
-└── package.json
-```
-
-## GitHub workflow cho team
-
-- Tạo issue bằng template Bug Report, Feature Request hoặc Task.
-- Tạo branch từ `dev`, ví dụ `feature/livestock-report` hoặc `fix/qr-lookup`.
-- Mở pull request vào `dev` và hoàn thành checklist trong PR template.
-- Chỉ merge khi CI xanh và thay đổi đã được review.
-- Tạo tag `vX.Y.Z` sau khi đã merge bản release.
-
-Thiết lập repo đề xuất nằm ở `docs/GITHUB_SETUP.md`.
-
-## Bảo mật
-
-- Không commit secrets, file `.env.local`, dump database thật hoặc file upload nhạy cảm.
-- Thay `AUTH_SECRET`, `NEXTAUTH_SECRET`, `CRON_SECRET` bằng giá trị mạnh khi deploy.
-- Cấu hình SMTP production bằng secrets của nền tảng deploy hoặc GitHub Actions.
-- Báo cáo lỗ hổng theo hướng dẫn trong `SECURITY.md`.

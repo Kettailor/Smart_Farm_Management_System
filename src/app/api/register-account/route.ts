@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { cauHinhCookieXacThuc, taoMatKhauHash, taoTokenXacThuc, TEN_COOKIE_XAC_THUC } from "@/lib/auth";
+import { taoCauHinhCookieXacThuc, taoMatKhauHash, taoTokenXacThuc, TEN_COOKIE_XAC_THUC } from "@/lib/auth";
+import { ensureCoreSchema } from "@/lib/core-schema";
 import { expireFarmInvitations, notifyFarmInvitationOwner } from "@/lib/farm-invitations";
 import { ensureSettingsSchema } from "@/lib/settings-schema";
 
@@ -101,25 +103,26 @@ async function completeInviteRegistration(fullName: string, email: string, passw
         [userId, fullName, passwordHash, inviteRow.so_dien_thoai ?? null, inviteRow.ngon_ngu ?? null]
       );
     } else {
+      const newUserId = randomUUID();
       const created = await client.query(
-        `insert into du_lieu.nguoi_dung (ho_ten, email, mat_khau_hash, so_dien_thoai, ngon_ngu, trang_thai)
-         values ($1, $2, $3, $4, $5, 'active')
+        `insert into du_lieu.nguoi_dung (id, ho_ten, email, mat_khau_hash, so_dien_thoai, ngon_ngu, trang_thai)
+         values ($1, $2, $3, $4, $5, $6, 'active')
          returning id::text`,
-        [fullName, email, passwordHash, inviteRow.so_dien_thoai ?? null, inviteRow.ngon_ngu ?? "vi-VN"]
+        [newUserId, fullName, email, passwordHash, inviteRow.so_dien_thoai ?? null, inviteRow.ngon_ngu ?? "vi-VN"]
       );
       userId = String(created.rows[0].id);
     }
 
     await client.query(
       `insert into du_lieu.thanh_vien_trang_trai
-         (trang_trai_id, nguoi_dung_id, vai_tro_id, trang_thai, metadata_json)
-       values ($1, $2, $3, 'active', $4::jsonb)
+         (id, trang_trai_id, nguoi_dung_id, vai_tro_id, trang_thai, metadata_json)
+       values ($1, $2, $3, $4, 'active', $5::jsonb)
        on conflict (trang_trai_id, nguoi_dung_id) do update
        set vai_tro_id = excluded.vai_tro_id,
            trang_thai = 'active',
            metadata_json = du_lieu.thanh_vien_trang_trai.metadata_json || excluded.metadata_json,
            updated_at = now()`,
-      [inviteRow.trang_trai_id, userId, inviteRow.vai_tro_id, JSON.stringify({ source: "invite", invite_id: inviteRow.id })]
+      [randomUUID(), inviteRow.trang_trai_id, userId, inviteRow.vai_tro_id, JSON.stringify({ source: "invite", invite_id: inviteRow.id })]
     );
 
     await client.query(
@@ -188,29 +191,33 @@ export async function POST(request: NextRequest) {
       const user = await completeInviteRegistration(fullName, email, password, inviteToken);
       const token = taoTokenXacThuc(String(user.id));
       const response = NextResponse.json({ message: "Đã chấp nhận lời mời và tạo mật khẩu thành công.", user, nextPath: "/dashboard" });
-      response.cookies.set(TEN_COOKIE_XAC_THUC, token, cauHinhCookieXacThuc);
-      response.cookies.set("ownerId", "", { ...cauHinhCookieXacThuc, maxAge: 0 });
+      const cookieConfig = taoCauHinhCookieXacThuc(request);
+      response.cookies.set(TEN_COOKIE_XAC_THUC, token, cookieConfig);
+      response.cookies.set("ownerId", "", { ...cookieConfig, maxAge: 0 });
       return response;
     }
 
+    await ensureCoreSchema();
     const existed = await db.query("select id from du_lieu.nguoi_dung where lower(email) = $1 limit 1", [email]);
     if (existed.rowCount) {
       return NextResponse.json({ message: "Email đã tồn tại trong hệ thống. Vui lòng dùng email khác." }, { status: 409 });
     }
 
     const passwordHash = taoMatKhauHash(password);
+    const userId = randomUUID();
     const result = await db.query(
-      `insert into du_lieu.nguoi_dung (ho_ten, email, mat_khau_hash)
-       values ($1, $2, $3)
+      `insert into du_lieu.nguoi_dung (id, ho_ten, email, mat_khau_hash)
+       values ($1, $2, $3, $4)
        returning id, ho_ten, email`,
-      [fullName, email, passwordHash]
+      [userId, fullName, email, passwordHash]
     );
 
     const user = result.rows[0] as { id: string; full_name: string; email: string };
     const token = taoTokenXacThuc(String(user.id));
     const response = NextResponse.json({ message: "Tạo tài khoản thành công.", user, nextPath: "/register/farm" });
-    response.cookies.set(TEN_COOKIE_XAC_THUC, token, cauHinhCookieXacThuc);
-    response.cookies.set("ownerId", "", { ...cauHinhCookieXacThuc, maxAge: 0 });
+    const cookieConfig = taoCauHinhCookieXacThuc(request);
+    response.cookies.set(TEN_COOKIE_XAC_THUC, token, cookieConfig);
+    response.cookies.set("ownerId", "", { ...cookieConfig, maxAge: 0 });
     return response;
   } catch (error) {
     return NextResponse.json(

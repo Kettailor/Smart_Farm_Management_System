@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
     await expireFarmInvitations(farmId);
 
     const fieldErrors: { email?: string; phone?: string } = {};
+    let hasPendingInvite = false;
 
     if (email) {
       if (!EMAIL_PATTERN.test(email)) {
@@ -119,9 +120,7 @@ export async function POST(request: NextRequest) {
            limit 1`,
           [farmId, email]
         );
-        if (!fieldErrors.email && (pendingInvite.rowCount ?? 0) > 0) {
-          fieldErrors.email = "Email đã có lời mời đang chờ.";
-        }
+        hasPendingInvite = (pendingInvite.rowCount ?? 0) > 0;
 
         const blockedInvite = await db.query(
           `select trang_thai, updated_at, updated_at + interval '1 month' as available_at
@@ -134,7 +133,7 @@ export async function POST(request: NextRequest) {
            limit 1`,
           [farmId, email]
         );
-        if (!fieldErrors.email && (blockedInvite.rowCount ?? 0) > 0) {
+        if (!fieldErrors.email && !hasPendingInvite && (blockedInvite.rowCount ?? 0) > 0) {
           const status = String(blockedInvite.rows[0]?.trang_thai ?? "").toLowerCase();
           const statusText = status === "declined" ? "đã từ chối" : "đã hết hạn";
           const availableAt = formatInviteCooldownDate(blockedInvite.rows[0]?.available_at);
@@ -174,7 +173,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ available: true, message: "Thông tin liên hệ có thể sử dụng." });
+    return NextResponse.json({
+      available: true,
+      pendingInvite: hasPendingInvite,
+      message: hasPendingInvite
+        ? "Email đã có lời mời đang chờ. Khi lưu, hệ thống sẽ gửi lại lời mời mới."
+        : "Thông tin liên hệ có thể sử dụng.",
+    });
   } catch (error) {
     return NextResponse.json(
       {

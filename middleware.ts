@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withBasePath, withoutBasePath } from "@/lib/app-path";
 import {
   docPayloadTokenXacThuc,
   layBiMatXacThuc,
@@ -70,18 +71,18 @@ function taoOriginTuRequest(request: NextRequest) {
 }
 
 function taoUrlRedirect(request: NextRequest, pathname: string) {
-  return new URL(pathname, taoOriginTuRequest(request));
+  return new URL(withBasePath(pathname), taoOriginTuRequest(request));
 }
 
 function taoLoginRedirect(request: NextRequest) {
   const url = taoUrlRedirect(request, "/login");
-  const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const nextPath = `${withoutBasePath(request.nextUrl.pathname)}${request.nextUrl.search}`;
   url.searchParams.set("next", nextPath);
   return NextResponse.redirect(url);
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const pathname = withoutBasePath(request.nextUrl.pathname);
   const ownerId = await layOwnerIdTuToken(request.cookies.get(TEN_COOKIE_XAC_THUC)?.value);
   const daDangNhap = Boolean(ownerId);
 

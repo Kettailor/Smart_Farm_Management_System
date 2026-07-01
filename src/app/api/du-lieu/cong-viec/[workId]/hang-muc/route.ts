@@ -219,7 +219,7 @@ async function notifyAssigneeOfNewItem(input: {
     taskUrl: buildAbsoluteUrl(input.request, href),
   });
   const mailResult = await sendMail({ to: assignee.email, ...emailContent });
-  return mailResult.sent ? null : mailResult.reason || "SMTP chưa sẵn sàng.";
+  return mailResult.sent ? null : mailResult.reason || "Webmail/SMTP chua san sang.";
 }
 
 function normalizePayload(body: ItemPayload) {

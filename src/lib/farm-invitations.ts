@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { createUserNotification, type NotificationTone } from "@/lib/notifications";
 import { ensureSettingsSchema } from "@/lib/settings-schema";
@@ -56,8 +57,8 @@ function rowToInvitation(row: Record<string, unknown>): InvitationRow {
 async function archiveInvitationContact(client: PoolClient, invite: InvitationRow, status: "declined" | "expired") {
   await client.query(
     `insert into du_lieu.lien_he_marketing_loi_moi
-       (loi_moi_id, trang_trai_id, nguoi_moi_id, ho_ten, email, so_dien_thoai, trang_thai_loi_moi, metadata_json)
-     values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+       (id, loi_moi_id, trang_trai_id, nguoi_moi_id, ho_ten, email, so_dien_thoai, trang_thai_loi_moi, metadata_json)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
      on conflict (loi_moi_id) do update
      set trang_trai_id = excluded.trang_trai_id,
          nguoi_moi_id = excluded.nguoi_moi_id,
@@ -68,6 +69,7 @@ async function archiveInvitationContact(client: PoolClient, invite: InvitationRo
          metadata_json = du_lieu.lien_he_marketing_loi_moi.metadata_json || excluded.metadata_json,
          updated_at = now()`,
     [
+      randomUUID(),
       invite.id,
       invite.farmId,
       invite.inviterId,

@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import { useRouter } from "next/navigation";
 import CowLoading from "@/components/cow-loading";
 import DashboardShell from "@/components/dashboard-shell";
+import { withBasePath } from "@/lib/app-path";
 import styles from "./page.module.css";
 
 type SettingsSection = "farm" | "users" | "documents";
@@ -984,7 +985,7 @@ export default function SettingsSectionClient({ section }: { section: SettingsSe
 
       if (data.deletedAccount) {
         setMessage("Đã xóa tài khoản và trang trại. Bạn sẽ được chuyển về trang đăng nhập.");
-        window.location.href = "/login";
+        window.location.href = withBasePath("/login");
         return;
       }
 

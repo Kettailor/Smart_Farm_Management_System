@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export const WAREHOUSE_SCHEMA_SQL = `
 create table if not exists du_lieu.kho_vat_tu (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   khu_vuc_id uuid references du_lieu.khu_vuc(id) on delete set null,
   ma_vat_tu text not null,
@@ -68,7 +69,7 @@ create index if not exists idx_kho_vat_tu_loai_kho on du_lieu.kho_vat_tu(loai_kh
 create index if not exists idx_kho_vat_tu_han_su_dung on du_lieu.kho_vat_tu(han_su_dung);
 
 create table if not exists du_lieu.kho_vat_tu_giao_dich (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   kho_vat_tu_id uuid not null references du_lieu.kho_vat_tu(id) on delete cascade,
   loai_giao_dich text not null,
@@ -90,7 +91,7 @@ create index if not exists idx_kho_vat_tu_giao_dich_nguon on du_lieu.kho_vat_tu_
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureWarehouseSchema() {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL || !shouldRunRuntimeSchemaSync()) return;
   ensurePromise ??= db.query(WAREHOUSE_SCHEMA_SQL).then(() => undefined);
   return ensurePromise;
 }

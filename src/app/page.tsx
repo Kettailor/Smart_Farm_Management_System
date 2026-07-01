@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { withBasePath } from "@/lib/app-path";
 
 function FeatureIcon({ type }: { type: "zone" | "data" | "trace" }) {
   if (type === "zone") {
@@ -54,7 +55,7 @@ export default function HomePage() {
       <section className="marketing-landing-header card">
         <div className="marketing-brand-block">
           <a href="/" className="marketing-brand marketing-brand-with-logo">
-            <Image src="/assets/logo_ketkatecofarm.png" alt="KetKat-EcoFarm" width={42} height={42} className="marketing-brand-logo" />
+            <Image src={withBasePath("/assets/logo_ketkatecofarm.png")} alt="KetKat-EcoFarm" width={42} height={42} className="marketing-brand-logo" />
             <span>KetKat-EcoFarm</span>
           </a>
           <p className="marketing-brand-subtitle">Nền tảng quản trị, bản đồ và truy xuất nông trại số</p>

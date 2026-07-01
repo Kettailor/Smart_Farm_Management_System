@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import CowLoading from "@/components/cow-loading";
+import { withBasePath } from "@/lib/app-path";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function LoginPage() {
       <section className="auth-card card">
         <div className="auth-visual">
           <div className="auth-brand-row">
-            <Image src="/favicon.ico" alt="KetKat-EcoFarm" width={46} height={46} className="auth-logo" />
+            <Image src={withBasePath("/favicon.ico")} alt="KetKat-EcoFarm" width={46} height={46} className="auth-logo" />
             <div>
               <p className="auth-brand-label">KetKat-EcoFarm</p>
               <strong>Nền tảng quản lý nông trại</strong>

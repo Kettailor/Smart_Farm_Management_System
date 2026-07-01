@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
-  cauHinhCookieXacThuc,
   hashDangLegacyMd5,
   kiemTraMatKhau,
+  taoCauHinhCookieXacThuc,
   taoMatKhauHash,
   taoTokenXacThuc,
   TEN_COOKIE_XAC_THUC,
@@ -90,8 +90,9 @@ export async function POST(request: NextRequest) {
       nextPath: user.has_farm ? "/dashboard" : "/register/farm",
     });
 
-    response.cookies.set(TEN_COOKIE_XAC_THUC, token, cauHinhCookieXacThuc);
-    response.cookies.set("ownerId", "", { ...cauHinhCookieXacThuc, maxAge: 0 });
+    const cookieConfig = taoCauHinhCookieXacThuc(request);
+    response.cookies.set(TEN_COOKIE_XAC_THUC, token, cookieConfig);
+    response.cookies.set("ownerId", "", { ...cookieConfig, maxAge: 0 });
     return response;
   } catch (error) {
     return NextResponse.json(

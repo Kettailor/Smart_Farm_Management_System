@@ -3,6 +3,7 @@
 import Image from "next/image";
 import NotificationBell from "@/components/notification-bell";
 import TopbarUserMenu from "@/components/topbar-user-menu";
+import { withBasePath } from "@/lib/app-path";
 import styles from "./dashboard-shell.module.css";
 
 type DashboardShellProps = {
@@ -119,7 +120,7 @@ export default function DashboardShell({ farmName, activePath, children }: Dashb
     <main className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <Image src="/favicon.ico" alt="KetKat-EcoFarm" width={34} height={34} className={styles.brandLogo} />
+          <Image src={withBasePath("/favicon.ico")} alt="KetKat-EcoFarm" width={34} height={34} className={styles.brandLogo} />
           <div>
             <div className={styles.brandText}>KetKat-EcoFarm</div>
             <div className={styles.brandSubtext}>{farmName}</div>

@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 
 export const GRAZING_SCHEMA_SQL = `
 create table if not exists du_lieu.ke_hoach_chan_tha (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   ma_ke_hoach text not null,
   ten_ke_hoach text not null,
@@ -38,7 +39,7 @@ create table if not exists du_lieu.ke_hoach_chan_tha_nhom_vat_nuoi (
 );
 
 create table if not exists du_lieu.su_kien_chan_tha (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   ke_hoach_id uuid not null references du_lieu.ke_hoach_chan_tha(id) on delete cascade,
   khu_vuc_id uuid references du_lieu.khu_vuc(id) on delete set null,
   nhom_vat_nuoi_id uuid references du_lieu.nhom_vat_nuoi(id) on delete set null,
@@ -80,7 +81,7 @@ create index if not exists idx_su_kien_chan_tha_ngay on du_lieu.su_kien_chan_tha
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureGrazingSchema() {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL || !shouldRunRuntimeSchemaSync()) return;
   ensurePromise ??= db.query(GRAZING_SCHEMA_SQL).then(() => undefined);
   return ensurePromise;
 }

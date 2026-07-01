@@ -1,10 +1,11 @@
 import { db } from "@/lib/db";
 import { ensureLivestockSchema } from "@/lib/livestock-schema";
+import { shouldRunRuntimeSchemaSync } from "@/lib/schema-sync";
 import { ensureWarehouseSchema } from "@/lib/warehouse-schema";
 
 export const LIVESTOCK_TREATMENT_SCHEMA_SQL = `
 create table if not exists du_lieu.dieu_tri_vat_nuoi (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   nhom_vat_nuoi_id uuid references du_lieu.nhom_vat_nuoi(id) on delete set null,
   kho_vat_tu_id uuid not null references du_lieu.kho_vat_tu(id) on delete restrict,
@@ -40,7 +41,7 @@ create table if not exists du_lieu.dieu_tri_vat_nuoi_ca_the (
 );
 
 create table if not exists du_lieu.kho_vat_tu_giao_dich (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key default du_lieu.uuid_v4(),
   trang_trai_id uuid not null references du_lieu.trang_trai(id) on delete cascade,
   kho_vat_tu_id uuid not null references du_lieu.kho_vat_tu(id) on delete cascade,
   loai_giao_dich text not null,
@@ -67,7 +68,7 @@ create index if not exists idx_kho_vat_tu_giao_dich_nguon on du_lieu.kho_vat_tu_
 let ensurePromise: Promise<void> | null = null;
 
 export async function ensureLivestockTreatmentSchema() {
-  if (!process.env.DATABASE_URL) return;
+  if (!process.env.DATABASE_URL || !shouldRunRuntimeSchemaSync()) return;
   await ensureWarehouseSchema();
   await ensureLivestockSchema();
   ensurePromise ??= db.query(LIVESTOCK_TREATMENT_SCHEMA_SQL).then(() => undefined);

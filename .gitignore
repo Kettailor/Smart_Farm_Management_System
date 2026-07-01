@@ -20,9 +20,13 @@
 
 # Build outputs
 /.next/
+/deploy/
 /out/
 /build/
 /dist/
+*.zip
+*.tar
+*.tar.gz
 
 # Coverage / test artifacts
 /coverage/
@@ -68,6 +72,13 @@ Thumbs.db
 
 # Security / certs
 *.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Runtime/user uploads
+/public/uploads/
 
 # Temporary files
 *.tmp
@@ -75,3 +86,23 @@ Thumbs.db
 
 # Local folders not for versioning
 UI-UX-Template_WebKetKat/
+
+# AI / agent local files
+/.agents/
+/.codex/
+/.cursor/
+/.claude/
+/.windsurf/
+AGENTS.md
+CLAUDE.md
+.cursorrules
+.cursorignore
+
+# Host/deploy-only files and guides
+/docs/GITHUB_SETUP.md
+/docs/*DEPLOY*.md
+/docs/CPANEL_DEPLOY.md
+/scripts/prepare-cpanel-deploy.ps1
+/scripts/import-postgresql-cpanel.sh
+/database/*cpanel*.sql
+/database/*demo*seed*.sql

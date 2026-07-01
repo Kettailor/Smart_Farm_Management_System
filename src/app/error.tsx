@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
+import { withBasePath } from "@/lib/app-path";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
         <div className="farm-error-panel card">
           <div className="farm-error-brand">
-            <Image src="/favicon.ico" alt="KetKat-EcoFarm" width={34} height={34} className="farm-error-logo" />
+            <Image src={withBasePath("/favicon.ico")} alt="KetKat-EcoFarm" width={34} height={34} className="farm-error-logo" />
             <span>KetKat-EcoFarm</span>
           </div>
 

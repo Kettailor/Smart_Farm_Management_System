@@ -1,3 +1,5 @@
+import { buildAppUrl, withBasePath } from "@/lib/app-path";
+
 const QR_BYTE_LIMIT = 78;
 
 function encodedAnimalId(animalId: string) {
@@ -9,14 +11,15 @@ function byteLength(value: string) {
 }
 
 export function buildPublicLivestockAnimalPath(animalId: string) {
-  return `/public/vat-nuoi/${encodedAnimalId(animalId)}`;
+  return withBasePath(`/public/vat-nuoi/${encodedAnimalId(animalId)}`);
 }
 
 export function buildPublicLivestockAnimalShortPath(animalId: string) {
-  return `/p/v/${encodedAnimalId(animalId)}`;
+  return withBasePath(`/p/v/${encodedAnimalId(animalId)}`);
 }
 
 export function buildPublicLivestockAnimalQrValue(animalId: string, origin: string) {
-  const absoluteShortUrl = `${origin.replace(/\/$/, "")}${buildPublicLivestockAnimalShortPath(animalId)}`;
-  return byteLength(absoluteShortUrl) <= QR_BYTE_LIMIT ? absoluteShortUrl : buildPublicLivestockAnimalShortPath(animalId);
+  const shortPath = buildPublicLivestockAnimalShortPath(animalId);
+  const absoluteShortUrl = buildAppUrl(origin, shortPath);
+  return byteLength(absoluteShortUrl) <= QR_BYTE_LIMIT ? absoluteShortUrl : shortPath;
 }
